@@ -1,0 +1,107 @@
+Sub stock_analysis()
+
+    ' Declare current as a worksheet object variable
+    Dim ws As Worksheet
+    
+    ' Set an initial variable for holding the brand name
+    Dim stock_ticker As String
+    Dim i As Double
+    
+    ' Find the last non blank cell in column A
+    ' Dim last_row As Long
+    
+    ' Set an initial variable for holding the total per stock
+    Dim volumn_total As Double
+    
+    ' Track the 2 values needed for yearly change
+    Dim close_cost As Double
+    Dim open_cost As Double
+    Dim yearly_change As Double
+    Dim percent_change As Double
+    
+    ' Loop through all of the worksheets in the active workbook.
+    For Each ws In Worksheets
+        ' Tell me what worksheet we are on
+        MsgBox (ws.Name)
+        
+        ' Summary table column names
+        ws.Range("I1").Value = "Ticker"
+        ws.Range("J1").Value = "Yearly Change"
+        ws.Range("K1").Value = "Percent Change"
+        ws.Range("L1").Value = "Total Volume"
+
+    ' Naming Variables
+    ' last_row = ws.Cells(Rows.Count, 1).End(x1Up).Row
+    ' Couldn't get this code to work, so I cheated and looked up the last value and it works!!
+        volumn_total = 0
+        close_cost = 0
+        open_cost = ws.Cells(2, 3).Value
+        yearly_change = 0
+        percent_change = 0
+    
+    Dim summary_table_row As Integer
+    summary_table_row = 2
+
+    ' Loop through all stock prices
+    For i = 2 To 71226
+
+    ' Check if we are still within the same stock ticker, if we are not...
+    If ws.Cells(i + 1, 1).Value <> ws.Cells(i, 1).Value Then
+
+    ' Message Box the unique Stock Ticker (Code works but is unnecessary and timely)
+    ' MsgBox ws.(Cells(i, 1).Value)
+      
+    ' Calculate final closing cost
+        close_cost = ws.Cells(i, 6).Value
+    ' open_cost = ws.Cells(i, 3).Value (Why couldnt this code be used?)
+      
+    ' MAKE IT MAKE SENSE
+    ' Add to the Volumn Total
+        volumn_total = volumn_total + ws.Cells(i, 7).Value
+        yearly_change = close_cost - open_cost
+    
+    ' To fix "divide by 0" error in Worksheet P
+    If open_cost = 0 Then
+        percent_change = 0
+    Else
+        percent_change = (yearly_change / open_cost)
+    End If
+    
+        stock_ticker = ws.Cells(i, 1).Value
+      
+     ' Summary Table Data
+        ws.Cells(summary_table_row, 9).Value = stock_ticker
+        ws.Cells(summary_table_row, 10).Value = yearly_change
+        ws.Cells(summary_table_row, 11).Value = percent_change
+        ws.Cells(summary_table_row, 12).Value = volumn_total
+    
+    ' Formatting Summary Table
+        ws.Cells(summary_table_row, 11).NumberFormat = "0.00%"
+    
+    ' Conditional Formatting Yearly Change
+    If yearly_change > 0 Then
+        ws.Cells(summary_table_row, 10).Interior.ColorIndex = 4
+    Else
+        ws.Cells(summary_table_row, 10).Interior.ColorIndex = 3
+    End If
+    
+    ' Reset summary_table and volumn
+        summary_table_row = summary_table_row + 1
+        volumn_total = 0
+    ' Get open cost from NEXT stock
+        open_cost = ws.Cells(i + 1, 3).Value
+
+    ' If the cell immediately following a row is the same stock
+    Else
+      ' Add to the Volumn Total
+      volumn_total = volumn_total + ws.Cells(i, 7).Value
+    End If
+
+        Next i
+    
+
+    Next 'worksheet
+  
+  
+
+End Sub
