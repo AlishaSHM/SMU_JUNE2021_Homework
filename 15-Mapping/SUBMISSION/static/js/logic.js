@@ -7,7 +7,7 @@ var timeframe = "all_week.geojson";
 var url = baseURL + timeframe;
 
 // geojson
-var tect_plates_url = "https://github.com/fraxen/tectonicplates/blob/master/GeoJSON/PB2002_boundaries.json";
+var tect_plates_url = "static/data/PB2002_boundaries.json";
 
 $(document).ready(function() {
     // AJAX
@@ -17,8 +17,25 @@ $(document).ready(function() {
         contentType: "application/json",
         dataType: "json",
         success: function(data) {
-            console.log(data);
-            makeMap(data);
+            // NESTED AJAX
+            $.ajax({
+                type: "GET",
+                url: tect_plates_url,
+                contentType: "application/json",
+                dataType: "json",
+                success: function(tect_data) {
+                    console.log(data);
+                    console.log(tect_data)
+                    makeMap(data, tect_data);
+
+                },
+                error: function(data) {
+                    console.log("YOU BROKE IT!!");
+                },
+                complete: function(data) {
+                    console.log("Request finished");
+                }
+            });
 
         },
         error: function(data) {
@@ -30,7 +47,7 @@ $(document).ready(function() {
     });
 });
 
-function makeMap(data) {
+function makeMap(data, tect_data) {
     // Create the base layers.
     var dark_layer = L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}', {
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
@@ -56,6 +73,20 @@ function makeMap(data) {
     let geoLayer = L.geoJSON(features, {
         onEachFeature: onEachFeature
     });
+
+    let plateLayer = L.geoJson(tect_data, {
+        // Passing in our style object
+        style: function(feature) {
+            return {
+                color: "#f5c542",
+                weight: 5
+            };
+        }
+    });
+
+
+    let tectplateLayer = L.geoJson(tect_data);
+
     var earthquakeMarkers = L.markerClusterGroup();
     var heatArray = [];
     var circleArray = [];
@@ -73,8 +104,8 @@ function makeMap(data) {
             // create the circle marker
             let circle = L.circle([location.coordinates[1], location.coordinates[0]], {
                 fillOpacity: 0.75,
-                color: makeColor(features[i].properties.mag),
-                fillColor: makeColor(features[i].properties.mag),
+                color: makeColor(location.coordinates[2]),
+                fillColor: makeColor(location.coordinates[2]),
                 // Setting our circle's radius to equal the output of our markerSize() function:
                 // This will make our marker's size proportionate to its population.
                 radius: makeRadius(features[i].properties.mag)
@@ -96,7 +127,8 @@ function makeMap(data) {
         "Earthquake Clusters": earthquakeMarkers,
         "Earthquakes": geoLayer,
         "Heatmap": heatLayer,
-        "Circles": circleLayer
+        "Circles": circleLayer,
+        "Tect Plates": tectplateLayer
     };
 
     // Modify the map so that it has the streetmap, states, and cities layers
@@ -108,7 +140,25 @@ function makeMap(data) {
 
     // Create a layer control that contains our baseMaps and overlayMaps, and add them to the map.
     L.control.layers(baseMaps, overlayMaps).addTo(myMap);
+
+    var legend = L.control({ position: 'bottomleft' });
+    legend.onAdd = function(map) {
+        var div = L.DomUtil.create('div', 'info legend');
+
+        let legend_html = `<i class="circle" style='background: #90f542'></i><span>-10-10</span><br>
+    <i class="circle" style='background: #bff542'></i><span>10-30</span><br>
+    <i class="circle" style='background: #eff542'></i><span>30-50</span><br>
+    <i class="circle" style='background: #f5ce42'></i><span>50-70</span><br>
+    <i class="circle" style='background: #f5a442'></i><span>70-90</span><br>
+    <i class="circle" style='background: #f56042'></i><span>90+</span>`;
+
+        div.innerHTML = legend_html;
+        return div;
+    }
+    legend.addTo(myMap);
+
 }
+
 // Helper Function
 function onEachFeature(feature, layer) {
     layer.bindPopup(`<h1>${feature.properties.mag}<b> MAG</b></h1><hr><p>${feature.properties.place}</p>`);
@@ -121,22 +171,22 @@ function makeRadius(magnitude) {
 }
 
 // HELPER FUNCTION FOR COLOR
-function makeColor(magnitude) {
-    let rtnColor = "red";
+function makeColor(depth) {
+    let rtnColor = "90f542";
 
     // Conditionals for earthquake magnitude
-    if (magnitude <= 10) {
-        rtnColor = "#90f542";
-    } else if (magnitude > 10 < 30) {
-        rtnColor = "#bff542";
-    } else if (magnitude < 50) {
-        rtnColor = "#eff542";
-    } else if (magnitude < 70) {
-        rtnColor = "#f5ce42";
-    } else if (magnitude < 90) {
-        rtnColor = "#f5a442";
-    } else {
+    if (depth > 90) {
         rtnColor = "#f56042";
+    } else if (depth > 70) {
+        rtnColor = "#f5a442";
+    } else if (depth > 50) {
+        rtnColor = "#f5ce42";
+    } else if (depth > 30) {
+        rtnColor = "#eff542";
+    } else if (depth > 10) {
+        rtnColor = "#bff542";
+    } else {
+        rtnColor = "#90f542";
     }
 
     return rtnColor;
